@@ -1,0 +1,5 @@
+import type {Metadata} from 'next';
+import {SITE_URL,SITE_DESCRIPTION} from '../lib/seo';
+import './globals.css';
+export const metadata:Metadata={metadataBase:new URL(SITE_URL),title:'Anonymous Journal — Thoughts, Stories & Poetry | Commonplace',description:SITE_DESCRIPTION,applicationName:'Commonplace',robots:{index:true,follow:true,googleBot:{index:true,follow:true,'max-image-preview':'large'}},icons:{icon:'/favicon.svg'},openGraph:{type:'website',siteName:'Commonplace',title:'Commonplace — A journal, by everyone.',description:SITE_DESCRIPTION,url:SITE_URL,images:[{url:'/social-card.png',width:1200,height:630,alt:'Commonplace — An open, anonymous journal for thoughts, stories and poetry.'}]},twitter:{card:'summary_large_image',title:'Commonplace — A journal, by everyone.',description:SITE_DESCRIPTION,images:['/social-card.png']},alternates:{types:{'application/rss+xml':SITE_URL+'/feed.xml'}},referrer:'strict-origin-when-cross-origin'};
+export default function RootLayout({children}:{children:React.ReactNode}){return <html lang="en"><body>{children}</body></html>}

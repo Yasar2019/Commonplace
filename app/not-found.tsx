@@ -1,0 +1,1 @@
+export default function NotFound(){return <main className="reading-page info-page"><a className="brand" href="/">commonplace.</a><h1>This page isn’t here.</h1><p>It may have been removed, or the address may be incomplete.</p><a className="info-cta" href="/">Return to the journal →</a></main>}

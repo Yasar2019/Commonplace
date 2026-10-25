@@ -1,0 +1,5 @@
+import {env} from 'cloudflare:workers';
+import {SITE_URL,entryTitle,xml,SITE_DESCRIPTION} from '../../lib/seo';
+import type {Entry} from '../../lib/journal';
+export const dynamic='force-dynamic';
+export async function GET(){const rows=await env.DB!.prepare('SELECT id,title,body,category,created_at AS createdAt FROM entries ORDER BY created_at DESC,id DESC LIMIT 50').all<Entry>();const items=rows.results.map(e=>`<item><title>${xml(entryTitle(e))}</title><link>${SITE_URL}/entry/${e.id}</link><guid isPermaLink="true">${SITE_URL}/entry/${e.id}</guid><pubDate>${new Date(e.createdAt).toUTCString()}</pubDate><category>${xml(e.category)}</category><description>${xml(e.body)}</description></item>`).join('');return new Response(`<?xml version="1.0" encoding="UTF-8"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Commonplace — An open journal</title><link>${SITE_URL}/</link><description>${xml(SITE_DESCRIPTION)}</description><atom:link href="${SITE_URL}/feed.xml" rel="self" type="application/rss+xml"/>${items}</channel></rss>`,{headers:{'Content-Type':'application/rss+xml; charset=utf-8','Cache-Control':'public, max-age=300'}})}
