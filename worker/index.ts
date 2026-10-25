@@ -3,7 +3,7 @@ import { runWithConnectorBinding } from "../lib/connector-context";
 import type { ConnectorBinding } from "../lib/connector-contract.mjs";
 
 const worker = {
-  fetch(request: Request, env: Cloudflare.Env, ctx: ExecutionContext<{ CONNECTORS?: ConnectorBinding }>) {
+  async fetch(request: Request, env: Cloudflare.Env, ctx: ExecutionContext<{ CONNECTORS?: ConnectorBinding }>) {
     let binding = ctx.props?.CONNECTORS;
     // Local preview emulates the same request-scoped capability. This branch and
     // the auxiliary service binding are absent from production builds.
@@ -23,7 +23,19 @@ const worker = {
         },
       };
     }
-    return runWithConnectorBinding(binding, () => handler.fetch(request, env, ctx));
+    const response=await runWithConnectorBinding(binding, () => handler.fetch(request, env, ctx));
+    const responseHeaders=new Headers(response.headers);
+    responseHeaders.set('X-Content-Type-Options','nosniff');
+    responseHeaders.set('X-Frame-Options','DENY');
+    responseHeaders.set('Referrer-Policy','strict-origin-when-cross-origin');
+    responseHeaders.set('Permissions-Policy','camera=(), microphone=(), geolocation=()');
+    const path=new URL(request.url).pathname;
+    if(path==='/'||path.startsWith('/entry/')||path.endsWith('.xml'))responseHeaders.set('Cache-Control','no-store');
+    if(path.startsWith('/admin')||path.startsWith('/api/admin')||path.startsWith('/my-entries')){
+      responseHeaders.set('Cache-Control','no-store, private');
+      responseHeaders.set('X-Robots-Tag','noindex, nofollow');
+    }
+    return new Response(response.body,{status:response.status,statusText:response.statusText,headers:responseHeaders});
   },
 };
 

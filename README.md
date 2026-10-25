@@ -10,7 +10,9 @@ An open, anonymous journal for thoughts, personal stories, and poetry. Anyone ca
 - Server-rendered journal and permanent entry pages
 - Search within the current page and category filters
 - Browser-local drafts and deletion receipts for your own entries
-- Basic posting limits, honeypot protection, and reporting
+- Owner moderation dashboard with pending/reported/published/hidden/rejected queues, audit trail and posting pause
+- Verified Cloudflare Access owner authentication, required server-validated Turnstile, atomic per-network quotas, duplicate detection, and bounded requests
+- Private receipt-based submission status and self-deletion
 - Canonical URLs, social preview metadata, typed JSON-LD, sitemap index, robots.txt, and RSS
 - Responsive layout, self-hosted fonts, and privacy/community pages
 
@@ -28,6 +30,7 @@ Use Node.js 22.13 or newer and pnpm 11.25.0 (the version in `package.json`).
 pnpm install --frozen-lockfile
 pnpm build
 node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0000_nasty_layla_miller.sql
+node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0001_nosy_the_professor.sql
 pnpm dev
 ```
 
@@ -58,11 +61,24 @@ Production deployments use the Sites workflow. A GitHub push does not automatica
 
 Never commit `.env` files, runtime secrets, `.wrangler`, `.sites-runtime`, `node_modules`, `dist`, or database contents. Public entry data is not part of this source repository.
 
-## Public beta limitations
+## Moderation release and Cloudflare setup
 
-Reports are stored, but there is no moderation dashboard yet. Posting limits currently depend on anonymous cookies and can be bypassed. Add stronger abuse controls and operational moderation before broad promotion. Search Console ownership verification and sitemap submission are also still required for monitoring discovery.
+This source release adds moderation and stronger spam protection. It is prepared for deployment to your own Cloudflare account. The existing live Site remains on the previous release until a separate migration and cutover.
 
-Anonymous means no author name is displayed; it does not guarantee untraceability. Posts are public and may appear in search engines. Browser deletion receipts can be lost if local storage is cleared. See the live privacy and community pages for the current behavior.
+Read **[the Cloudflare deployment guide](docs/CLOUDFLARE_DEPLOYMENT.md)** before hosting. It covers D1, Access owner-only paths, Turnstile, runtime secrets, migrations, backups, deployment, and a future custom domain. Start with `cloudflare.example.json`; the filled `cloudflare.config.json` stays ignored.
+
+```sh
+pnpm check:cloudflare
+pnpm build:cloudflare
+```
+
+New submissions enter **pending review**. Existing entries migrate as **published**. Pending, hidden and rejected entries are excluded from all public surfaces. Owners use `/admin`; visitors use `/my-entries` with their browser's deletion receipts. Moderator entry actions are reversible; author deletion is permanent and does not remove copies held outside this service.
+
+Security is enabled by configuration, never by a development bypass: missing Access configuration, trusted network metadata, Turnstile settings or rate-limit secret blocks protected operations. Normal local pages remain readable, but posting/admin access stays unavailable until configured. Real Cloudflare credentials and end-to-end checks on the final hostname are required before opening submissions. No claims of immunity to all spam or production load testing are made.
+
+`drizzle/0001_nosy_the_professor.sql` is an additive migration. Preserve previous migrations; do not reinitialize an existing database. The SQLite-backed security/state tests use Node 24+ and run with `pnpm test`.
+
+Anonymous means no author name is displayed; infrastructure providers still receive technical requests. Public entries may appear in search engines. Search Console ownership verification and sitemap submission remain owner setup tasks.
 
 ## Third-party licenses
 

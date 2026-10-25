@@ -1,4 +1,4 @@
-export const SITE_URL='https://commonplace-open-journal.carlos-nazzarian.chatgpt.site';
+export const SITE_URL=process.env.NEXT_PUBLIC_SITE_URL || 'https://commonplace-open-journal.carlos-nazzarian.chatgpt.site';
 export const SITE_NAME='Commonplace';
 export const SITE_DESCRIPTION='An open, anonymous journal for thoughts, personal stories, and poetry. Read what others are feeling, or share your own words. No account or email needed.';
 export function parsePage(value:string|undefined){if(!value||!/^\d+$/.test(value))return 1;const page=Number(value);return page>=1&&page<=100000?page:1}

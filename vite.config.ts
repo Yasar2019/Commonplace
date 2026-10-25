@@ -5,6 +5,7 @@ import { readExecutionProfile } from "./scripts/execution-profile.mjs";
 import { configureToolEnvironment } from "./scripts/tool-environment.mjs";
 import { sites } from "./scripts/vite/sites-vite-plugin";
 import { connectorPreview } from "./scripts/vite/connector-preview-plugin.mjs";
+import { loadCloudflareConfig } from "./scripts/cloudflare-config.mjs";
 
 const SITE_CREATOR_PLACEHOLDER_DATABASE_ID =
   "00000000-0000-4000-8000-000000000000";
@@ -39,11 +40,15 @@ const localBindingConfig = {
 
 export default defineConfig(async ({ command }) => {
   configureToolEnvironment(process.cwd());
+  const standalone = process.env.COMMONPLACE_TARGET === "cloudflare";
+  const ownerConfig = standalone ? loadCloudflareConfig(process.cwd()) : null;
+  const siteUrl = ownerConfig?.vars.SITE_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? "https://commonplace-open-journal.carlos-nazzarian.chatgpt.site";
 
   // Wrangler snapshots its log path while the Cloudflare plugin is imported.
   const { cloudflare } = await import("@cloudflare/vite-plugin");
 
   return {
+    define: { "process.env.NEXT_PUBLIC_SITE_URL": JSON.stringify(siteUrl) },
     server: {
       ...(managedLinux
         ? { host: "0.0.0.0", allowedHosts: ["terminal.local"] }
@@ -54,14 +59,14 @@ export default defineConfig(async ({ command }) => {
     },
     plugins: [
       vinext(),
-      sites({ mockAuth: !managedLinux }),
-      connectorPreview(),
+      sites({ mockAuth: !standalone && !managedLinux }),
+      ...(!standalone ? [connectorPreview()] : []),
       cloudflare({
         viteEnvironment: { name: "rsc", childEnvironments: ["ssr"] },
         inspectorPort: false,
         config: {
-          ...localBindingConfig,
-          ...(command === "serve"
+          ...(ownerConfig ?? localBindingConfig),
+          ...(command === "serve" && !standalone
             ? {
                 services: [
                   {
@@ -73,7 +78,7 @@ export default defineConfig(async ({ command }) => {
               }
             : {}),
         },
-        ...(command === "serve"
+        ...(command === "serve" && !standalone
           ? {
               auxiliaryWorkers: [
                 {
