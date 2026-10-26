@@ -72,7 +72,7 @@ pnpm check:cloudflare
 pnpm build:cloudflare
 ```
 
-New submissions enter **pending review**. Existing entries migrate as **published**. Pending, hidden and rejected entries are excluded from all public surfaces. Owners use `/admin`; visitors use `/my-entries` with their browser's deletion receipts. Moderator entry actions are reversible; author deletion is permanent and does not remove copies held outside this service.
+New submissions publish **immediately** after spam and abuse checks. Existing pending entries remain pending for an owner’s decision; this change does not bulk-publish them. Pending, hidden and rejected entries are excluded from all public surfaces. Owners use `/admin`; visitors use `/my-entries` with their browser's deletion receipts. Moderator entry actions are reversible; author deletion is permanent and does not remove copies held outside this service.
 
 Security is enabled by configuration, never by a development bypass: missing Access configuration, trusted network metadata, Turnstile settings or rate-limit secret blocks protected operations. Normal local pages remain readable, but posting/admin access stays unavailable until configured. Real Cloudflare credentials and end-to-end checks on the final hostname are required before opening submissions. No claims of immunity to all spam or production load testing are made.
 

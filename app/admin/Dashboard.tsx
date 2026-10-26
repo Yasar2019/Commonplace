@@ -11,11 +11,11 @@ type Report = { id: string; entryId: string; reason: string; createdAt: number; 
 type Audit = { id: string; entryId: string | null; action: string; actor: string; reason: string; createdAt: number };
 type Result = { entries: Entry[]; reports: Report[]; audit: Audit[]; total: number; page: number; counts: Record<'pending' | 'reported' | 'published' | 'hidden' | 'rejected', number>; postingPaused: boolean; readiness: { turnstile: boolean; rateLimit: boolean; admin: boolean } };
 const sections = [
-  { id: 'pending', label: 'Pending review', icon: Inbox, description: 'A little care before a wider audience.' },
+  { id: 'pending', label: 'Pending review', icon: Inbox, description: 'Earlier submissions awaiting your decision.' },
   { id: 'reported', label: 'Reported', icon: Flag, description: 'Listen closely. Review the words and their context.' },
   { id: 'published', label: 'Published', icon: BookOpen, description: 'The words currently out in the world.' },
   { id: 'hidden', label: 'Hidden', icon: EyeOff, description: 'Set aside from the public journal.' },
-  { id: 'rejected', label: 'Rejected', icon: X, description: 'Submissions that were not published.' },
+  { id: 'rejected', label: 'Rejected', icon: X, description: 'Entries removed following a moderation decision.' },
   { id: 'audit', label: 'Activity log', icon: History, description: 'A record of the decisions that shape this space.' },
   { id: 'settings', label: 'Settings', icon: Settings2, description: 'Keep this small corner of the internet well tended.' },
 ] as const;
@@ -31,7 +31,7 @@ async function api<T>(url: string, options?: RequestInit): Promise<T> {
 }
 
 export default function Dashboard() {
-  const [view, setView] = useState<View>('pending');
+  const [view, setView] = useState<View>('reported');
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [query, setQuery] = useState('');
@@ -96,7 +96,7 @@ export default function Dashboard() {
                 <div className="admin-entry-decision"><label htmlFor={`reason-${entry.id}`}>Decision note <span>Required for hide, reject and report decisions</span></label><textarea id={`reason-${entry.id}`} value={reason} onChange={event => setReasons(current => ({ ...current, [entry.id]: event.target.value }))} placeholder="Add context for the activity log…" maxLength={600} disabled={busy} /><div className="admin-entry-actions"><span>Version {entry.version}</span>{entry.status !== 'published' && <button className="admin-button admin-primary" disabled={locked} onClick={() => mutate({ type: 'entry', id: entry.id, version: entry.version, action: 'publish', reason: reason.trim() }, entry.status === 'hidden' || entry.status === 'rejected' ? 'Entry restored to the public journal.' : 'Entry published to the journal.')}><Check size={13} />{entry.status === 'hidden' || entry.status === 'rejected' ? 'Restore & publish' : 'Publish'}</button>}{entry.status !== 'hidden' && <button className="admin-button" disabled={locked || !reason.trim()} onClick={() => mutate({ type: 'entry', id: entry.id, version: entry.version, action: 'hide', reason: reason.trim() }, 'Entry hidden from the public journal.')}><EyeOff size={13} />Hide</button>}{entry.status !== 'rejected' && <button className="admin-button admin-reject" disabled={locked || !reason.trim()} onClick={() => mutate({ type: 'entry', id: entry.id, version: entry.version, action: 'reject', reason: reason.trim() }, 'Entry rejected and recorded.')}><X size={13} />Reject</button>}</div></div>
               </article>;
             })}</div>}
-            {data.total === 0 && <div className="admin-empty"><section.icon size={32} strokeWidth={1} /><h2>{query ? 'No matching words.' : view === 'pending' ? 'A quiet desk.' : 'Nothing here just yet.'}</h2><p>{query ? 'Try another search or clear the filter.' : view === 'pending' ? 'New submissions will appear here for your review.' : 'Items will appear here when there is something to review.'}</p></div>}
+            {data.total === 0 && <div className="admin-empty"><section.icon size={32} strokeWidth={1} /><h2>{query ? 'No matching words.' : view === 'pending' ? 'A quiet desk.' : 'Nothing here just yet.'}</h2><p>{query ? 'Try another search or clear the filter.' : view === 'pending' ? 'Earlier entries awaiting review remain here. New entries publish immediately.' : 'Items will appear here when there is something to review.'}</p></div>}
             {(data.total > 0 || page > 1) && <div className="admin-pagination"><button className="admin-button" disabled={locked || page === 1} onClick={() => changePage(page - 1)}><ArrowLeft size={13} />Previous</button><span>Page {data.page} of {Math.max(1, Math.ceil(data.total / 20))}</span><button className="admin-button" disabled={locked || page * 20 >= data.total} onClick={() => changePage(page + 1)}>Next<ArrowRight size={13} /></button></div>}
           </>}
         </>}

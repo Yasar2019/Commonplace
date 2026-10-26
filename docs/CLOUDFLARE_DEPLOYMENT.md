@@ -86,7 +86,7 @@ For an existing database, export and retain a backup before schema changes:
 pnpm exec wrangler d1 export DB --remote --output commonplace-before-migration.sql --config dist/server/wrangler.json
 ```
 
-Store that export securely; it can include private operational records. D1 migration tracking and Drizzle's own history use different metadata: do not apply the full sequence to a previously initialized database without reconciling the baseline. Existing entries must remain present and migrate as published; new entries start pending. Rehearse on a separate database, compare counts/statuses, verify receipts where available, and define rollback/restore before touching live data. An old Worker binary may not be compatible after a schema change.
+Store that export securely; it can include private operational records. D1 migration tracking and Drizzle's own history use different metadata: do not apply the full sequence to a previously initialized database without reconciling the baseline. Existing entries must remain present and migrate as published; new entries publish immediately after spam checks. Any existing pending entries stay pending until an owner decides. Rehearse on a separate database, compare counts/statuses, verify receipts where available, and define rollback/restore before touching live data. An old Worker binary may not be compatible after a schema change.
 
 Moving existing live Site data is a separate owner-approved operation: obtain an authorized export, back it up, rehearse import into the new account, preserve entry IDs and receipt hashes, verify public counts and moderation statuses, then choose cutover timing. These instructions do not authorize or perform that transfer.
 
@@ -94,7 +94,7 @@ Moving existing live Site data is a separate owner-approved operation: obtain an
 
 Visit the canonical hostname and check public pages without login. Open `/admin` and confirm Access prompts for the owner; test an unauthorized identity and confirm denial. Verify unauthenticated `/api/admin/*` requests cannot mutate anything and owner actions write audit events. Check readiness on the owner dashboard.
 
-Publish a real challenge-backed entry: it should be pending and absent from public lists, feed, detail URLs and sitemap until an owner publishes it. Verify local receipt status, reports, hiding/restoring, stale-version conflict handling and global posting pause. Review failed challenges/rate limits without storing raw IP addresses. Do not declare launch complete while readiness reports missing configuration.
+Publish a real challenge-backed entry: it should publish immediately and appear in public lists, feed, detail URLs and sitemap. Existing pending entries must remain private until an owner publishes them. Verify local receipt status, reports, hiding/restoring, stale-version conflict handling and global posting pause. Review failed challenges/rate limits without storing raw IP addresses. Do not declare launch complete while readiness reports missing configuration.
 
 When adding a custom domain later, configure DNS/Workers routing and HTTPS, add the hostname to the same Access application and Turnstile widget, update `SITE_URL`, rebuild, and redeploy. Verify the final canonical links and protection again before redirecting visitors from another hostname.
 

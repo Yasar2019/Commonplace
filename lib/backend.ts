@@ -25,20 +25,18 @@ export async function publicEntries(request:Request,env:Runtime){
 }
 export async function submitEntry(request:Request,env:Runtime,deps:Dependencies={}){
  const time=now(deps);await networkQuota(request,env,'publish-short',5,600,time);await networkQuota(request,env,'publish-day',20,86400,time);
- if(!adminConfigured(env))fail(503,'The review team is not configured yet. Please return later.');
+ if(!adminConfigured(env))fail(503,'Moderation is not configured yet. Please return later.');
  const data=parse(entryInput,await readJson(request));if(data.website)fail(400,'Unable to accept this submission.');if(await isPaused(env))fail(503,'New entries are paused while we care for the journal. Please return later.');
  if((data.body.match(/https?:\/\//gi)||[]).length>2)fail(400,'Please include no more than two links.');
  await verifyTurnstile(data.turnstileToken,'publish',env,deps.fetcher);
  const writer=cookie(request,'journal_writer'),token=crypto.randomUUID(),id=crypto.randomUUID();
  const hash=await sha256(data.body.normalize('NFKC').toLowerCase().replace(/\s+/g,' ').trim());
- const count=await db(env).prepare("SELECT COUNT(*) AS n FROM entries WHERE status='pending'").first<{n:number}>();if((count?.n||0)>=1000)fail(503,'The review queue is full. Please try again later.');
  const result=await db(env).prepare(`INSERT INTO entries(id,title,body,category,created_at,author,delete_hash,status,version,content_hash,last_action_id)
- SELECT ?,?,?,?,?,?,?,'pending',0,?,'' WHERE NOT EXISTS(SELECT 1 FROM entries WHERE author=? AND created_at>?)
+ SELECT ?,?,?,?,?,?,?,'published',0,?,'' WHERE NOT EXISTS(SELECT 1 FROM entries WHERE author=? AND created_at>?)
  AND NOT EXISTS(SELECT 1 FROM entries WHERE content_hash=? AND created_at>?)
- AND NOT EXISTS(SELECT 1 FROM settings WHERE key='posting_paused' AND value='true')
- AND (SELECT COUNT(*) FROM entries WHERE status='pending')<1000`).bind(id,data.title,data.body,data.category,time,writer,await sha256(token),hash,writer,time-60000,hash,time-86400000).run();
+ AND NOT EXISTS(SELECT 1 FROM settings WHERE key='posting_paused' AND value='true')`).bind(id,data.title,data.body,data.category,time,writer,await sha256(token),hash,writer,time-60000,hash,time-86400000).run();
  if(!result.meta.changes){if(await isPaused(env))fail(503,'New entries are paused. Please return later.');const duplicate=await db(env).prepare('SELECT id FROM entries WHERE content_hash=? AND created_at>?').bind(hash,time-86400000).first();if(duplicate)fail(409,'An identical entry was recently submitted. Please leave something original.');fail(429,'Please wait a minute before submitting another entry.')}
- return json({entry:{id,title:data.title,body:data.body,category:data.category,createdAt:time,status:'pending'},deleteToken:token},201,{'Set-Cookie':`journal_writer=${writer}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=31536000`});
+ return json({entry:{id,title:data.title,body:data.body,category:data.category,createdAt:time,status:'published'},deleteToken:token},201,{'Set-Cookie':`journal_writer=${writer}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=31536000`});
 }
 export async function reportEntry(request:Request,env:Runtime,deps:Dependencies={}){
  const time=now(deps),reporter=await networkQuota(request,env,'report',10,3600,time);
@@ -88,7 +86,7 @@ export async function adminMutate(request:Request,env:Runtime,deps:Dependencies=
  return json({ok:true});
 }
 export async function adminRead(request:Request,env:Runtime,deps:Dependencies={}){
- await requireOwner(request,env,deps);const url=new URL(request.url),view=url.searchParams.get('view')||'pending';if(!['pending','reported','published','hidden','rejected','audit','settings'].includes(view))fail(400,'Unknown dashboard view.');
+ await requireOwner(request,env,deps);const url=new URL(request.url),view=url.searchParams.get('view')||'reported';if(!['pending','reported','published','hidden','rejected','audit','settings'].includes(view))fail(400,'Unknown dashboard view.');
  const raw=url.searchParams.get('page')||'1';const page=/^\d+$/.test(raw)?Math.max(1,Math.min(100000,Number(raw))):1;const search=(url.searchParams.get('q')||'').slice(0,120);const pattern='%'+search.replace(/[\\%_]/g,'\\$&')+'%';
  const counts={pending:0,published:0,reported:0,hidden:0,rejected:0};const grouped=await db(env).prepare('SELECT status,COUNT(*) AS n FROM entries GROUP BY status').all<{status:string;n:number}>();for(const row of grouped.results)if(row.status in counts)counts[row.status as keyof typeof counts]=row.n;
  counts.reported=(await db(env).prepare("SELECT COUNT(DISTINCT entry_id) AS n FROM reports WHERE status='open'").first<{n:number}>())?.n||0;

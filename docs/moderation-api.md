@@ -4,7 +4,7 @@ All JSON, no-store. Anonymous mutation errors: `{error:string}`, HTTP 400/403/40
 
 ## Public
 - GET /api/security/config -> `{siteKey:string,postingPaused:boolean,ready:boolean}` (never secrets). Action values `publish` and `report`.
-- POST /api/entries body `{title,body,category,website?,turnstileToken}` -> 201 `{entry:{id,title,body,category,createdAt,status:'pending'},deleteToken}`. Do not insert pending entry into public stream.
+- POST /api/entries body `{title,body,category,website?,turnstileToken}` -> 201 `{entry:{id,title,body,category,createdAt,status:'published'},deleteToken}`. The entry is immediately available on public surfaces. Save its deletion receipt and refresh the first page of the public stream.
 - DELETE /api/entries body `{id,token}` -> `{ok:true}`.
 - POST /api/report `{id,reason,turnstileToken}` reason existing enum -> `{ok:true}`.
 - POST /api/my-entries `{receipts:[{id,token}]}` max50 -> `{entries:[{id,title,body,category,createdAt,status,version}]}`. Only correct receipts returned.
